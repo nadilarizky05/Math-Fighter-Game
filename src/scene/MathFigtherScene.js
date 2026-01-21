@@ -6,8 +6,8 @@ import Phaser from 'phaser'
         super('math-fighter-scene')
     }
     init(){
-        this.gameHalfWidth = this.scale.width * 0,5;
-        this.gameHalfHeight = this.scale.height * 0,5;
+        this.gameHalfWidth = this.scale.width * 0.5;
+        this.gameHalfHeight = this.scale.height * 0.5;
         this.player = undefined;
         this.enemy = undefined;
         this.slash = undefined;
@@ -26,25 +26,28 @@ import Phaser from 'phaser'
         this.button0 = undefined;
         this.buttonDel = undefined;
         this.buttonOk = undefined;  
+        this.numberArray = [];
+        this.number = 0; 
+        this.question = [];
     }
 
     preload(){
-        this.load.image("background", "bg_layer1.png");
-        this.load.image("fight-bg", "fight-bg.png")
-        this.load.image("tile", "tile.png")
-         this.load.spritesheet("player", "warrior1.png", {
+        this.load.image("background", "images/bg_layer1.png");
+        this.load.image("fight-bg", "images/fight-bg.png")
+        this.load.image("tile", "images/tile.png")
+         this.load.spritesheet("player", "images/warrior1.png", {
             frameWidth: 80,
             frameHeight: 80,
         });
-        this.load.spritesheet("enemy", "warrior2.png", {
+        this.load.spritesheet("enemy", "images/warrior2.png", {
             frameWidth: 80,
             frameHeight: 80,
         });
-        this.load.spritesheet("numbers", "numbers.png", {
+        this.load.spritesheet("numbers", "images/numbers.png", {
             frameWidth: 131,
             frameHeight: 71.25,
         });
-        this.load.spritesheet("slash", "slash.png", {
+        this.load.spritesheet("slash", "images/slash.png", {
             frameWidth: 42,
             frameHeight: 88,
         });
@@ -52,27 +55,37 @@ import Phaser from 'phaser'
 
     }
     create(){
-        this.add.image(240, 320, "backgruond");
+        //Membuat Background
+        this.add.image(240, 320, "background");
         const fight_bg = this.add.image(240,160, "fight-bg");
         const tile = this.physics.add.staticImage(240, fight_bg.height - 40, "tile");
         
+        //Membuat Player
         this.player = this.physics.add.sprite(this.gameHalfWidth - 150, this.gameHalfHeight - 200, "player")
         .setBounce(0.2)
         .setOffset(-20, -10)
         this.physics.add.collider(this.player, tile);
 
+        //Membuat Enemy
         this.enemy = this.physics.add.sprite(this.gameHalfWidth + 150, this.gameHalfHeight - 200, "player")
         .setBounce(0.2)
-        .setOffset(-20, -10)
+        .setOffset(20, -10)
+        .setFlipX(true)
         this.physics.add.collider(this.enemy, tile);
+
+        //Membuat Slash
         this.slash = this.physics.add.sprite(240, 60, "slash")
         .setActive(false)
-        .setVisible(true)
+        .setVisible(false)
         .setGravityY(-500)
         .setOffset(0, -10)
         .setDepth(1)
         .setCollideWorldBounds(true);
+
+        //Panggil Method Create Animation
         this.createAnimation();
+
+        //Panggil Method Game Start
         let start_button = this.add.image(this.gameHalfWidth, this.gameHalfHeight + 181, "start-btn") .setInteractive();
         start_button.on(
             "pointerdown",
@@ -139,7 +152,8 @@ import Phaser from 'phaser'
         this.resultText = this.add.text(this.gameHalfWidth, 200, '0', { fontSize: '32px', fill: '#000'});
         this.questionText = this.add.text(this.gameHalfWidth, 100, '0', { fontSize: '32px', fill: '#000'});
         this.createButtons();
-
+        this.input.on("gameobjectdown", this.addNumber, this);
+        this.generateQuestion();
     }
     createButtons() {
         const startPosY = this.scale.height - 246;
@@ -202,4 +216,69 @@ import Phaser from 'phaser'
         .setData("value", "ok");
     }
 
+    addNumber(pointer, object, event){
+        let value = object.getData('value') //Menyimpan data dengan key value,  menggunakan method getData() untuk mengambil nilainya
+        if (isNaN(value)) {
+            if(value == 'del') {
+            if(this.numberArray.length > 1) {
+                this.numberArray.pop()  // menghapus satu elemen index terakhir pada array
+                this.numberArray[0] = 0
+            }
+            }
+            if(value == 'ok') {
+            this.checkAnswer()
+            this.numberArray = [0]
+            }
+        } else {
+            if (this.numberArray.length < 10){
+            if (this.numberArray.length==1 && this.numberArray[0]==0){
+                this.numberArray[0] = value
+            } else {
+                this.numberArray.push(value)
+            }
+            }
+        }
+        this.number = parseInt(this.numberArray.join(''))
+        this.resultText.setText(this.number);
+        const textHalfWidth = this.resultText.width * 0.5;
+        this.resultText.setX(this.gameHalfWidth - textHalfWidth);
+        event.stopPropagation();
+    }
+
+    getOperator() {
+        const operators = ['+', '-', 'x', ':'];
+        return operators[Phaser.Math.Between(0, 3)];
+    }
+
+    generateQuestion(){
+        let numberA = Phaser.Math.Between(0, 50)
+        let numberB = Phaser.Math.Between(0, 50)
+        let operator = this.getOperator()
+        if (operator === '+') {
+        this.question[0] = `${numberA} + ${numberB}`
+        this.question[1] = numberA + numberB 
+        } else if (operator === 'x'){
+            this.question[0] = `${numberA} x ${numberB}`
+            this.question[1] = numberA * numberB 
+        } else if (operator === '-'){
+            if (numberB > numberA) {
+            this.question[0] = `${numberB} - ${numberA}`
+            this.question[1] = numberB - numberA
+            } else {
+            this.question[0] = `${numberA} - ${numberB}`
+            this.question[1] = numberA - numberB
+            }
+        } else if (operator === ':'){
+            do {
+            numberA = Phaser.Math.Between(0, 50)
+            numberB = Phaser.Math.Between(0, 50)
+            } while (!Number.isInteger(numberA/numberB))
+            this.question[0] = `${numberA} : ${numberB}`
+            this.question[1] = numberA / numberB   
+        }
+
+        this.questionText.setText(this.question[0]);
+        const textHalfWidth = this.questionText.width * 0.5;
+        this.questionText.setX(this.gameHalfWidth - textHalfWidth);
+    }
  }
