@@ -29,6 +29,14 @@ import Phaser from 'phaser'
         this.numberArray = [];
         this.number = 0; 
         this.question = [];
+        this.correctAnswer = undefined;
+        this.playerAttack = false;
+        this.enemyAttack = false;
+        this.score = 0
+        this.scoreLabel = undefined
+        this.timer = 60;
+        this.timerLabel = undefined;
+        this.countdown= undefined;
     }
 
     preload(){
@@ -95,9 +103,51 @@ import Phaser from 'phaser'
             },
             this
         );
-    }
-    update(){
         
+        this.scoreLabel = this.add.text(10, 10, 'Score: 0', {
+            fill: 'white',
+            backgroundColor: 'black'
+        }).setDepth(1);
+
+        this.timerLabel = this.add
+        .text(380, 10, "Time :", {
+            fill: "white",
+            backgroundColor: "black",
+        })
+        .setDepth(1);
+    }
+    update(time){
+        if (this.correctAnswer === true && !this.playerAttack) {
+            this.player.anims.play('player-attack', true);
+            this.time.delayedCall(500, () => {
+            this.createSlash(this.player.x + 60, this.player.y, 4, 600);
+            });
+            this.playerAttack = true;
+            this.score += 10;
+            this.scoreLabel.setText(`Score: ${this.score}`);
+        }
+        if (this.correctAnswer === undefined) {
+            this.player.anims.play('player-standby', true);
+            this.enemy.anims.play('enemy-standby', true);
+        }
+        if (this.correctAnswer === false && !this.enemyAttack) {
+            this.enemy.anims.play('enemy-attack', true);
+            this.time.delayedCall(500, () => {
+            this.createSlash(this.enemy.x - 60, this.enemy.y, 2, -600, true);
+            });
+            this.enemyAttack = true;
+            this.score -= 5;
+            this.scoreLabel.setText(`Score: ${this.score}`);
+        }
+
+        this.physics.add.overlap(this.slash, this.player, this.spriteHit, null, this);
+        this.physics.add.overlap(this.slash, this.enemy, this.spriteHit, null, this);
+
+        this.scoreLabel.setText("Score :" + this.score);
+
+        if ((this.startGame = true)) {
+            this.timerLabel.setText("Timer :" + this.timer);
+        }
     }
     createAnimation() {
     this.anims.create({
@@ -154,6 +204,13 @@ import Phaser from 'phaser'
         this.createButtons();
         this.input.on("gameobjectdown", this.addNumber, this);
         this.generateQuestion();
+
+        this.countdown = this.time.addEvent({
+            delay: 1000,
+            callback: this.gameOver,
+            callbackScope: this,
+            loop: true,
+        });
     }
     createButtons() {
         const startPosY = this.scale.height - 246;
@@ -280,5 +337,47 @@ import Phaser from 'phaser'
         this.questionText.setText(this.question[0]);
         const textHalfWidth = this.questionText.width * 0.5;
         this.questionText.setX(this.gameHalfWidth - textHalfWidth);
+    }
+    checkAnswer(){
+        if (this.number == this.question[1]){
+            this.correctAnswer = true
+        } else {
+            this.correctAnswer = false
+        }
+    }
+    createSlash(x, y, frame, velocity, flip = false){
+        this.slash.setPosition(x,y)
+        .setActive(true)
+        .setVisible(true)
+        .setFrame(frame)
+        .setFlipX(flip)
+        .setVelocityX(velocity);
+    }
+    spriteHit(slash, sprite) {
+        slash.x = 0
+        slash.y = 0
+        slash.setActive(false)
+        slash.setVisible(false)
+        if (sprite.texture.key === 'player') {
+            sprite.anims.play('player-hit', true)
+        } else {
+            sprite.anims.play('enemy-hit', true)
+        }
+        this.time.delayedCall(500, () => {
+            this.playerAttack = false
+            this.enemyAttack = false
+            this.correctAnswer = undefined
+            this.generateQuestion()
+            this.player.anims.play('player-standby', true)
+            this.enemy.anims.play('enemy-standby', true)
+        })
+    }
+
+    gameOver()
+    {
+        this.timer--;
+        if (this.timer < 0) {
+            this.scene.start("over-scene", { score: this.score });
+        }
     }
  }

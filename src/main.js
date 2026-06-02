@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 
 import MathFighterScene from './scene/MathFigtherScene'
+import GameOverScene from './scene/GameOverScene'
 
 
 const config = {
@@ -15,7 +16,7 @@ const config = {
 			debug: false
 		},
 	},
-	scene: [MathFighterScene],
+	scene: [MathFighterScene, GameOverScene],
 	scale: {
 		mode: Phaser.Scale.FIT,
 		autoCenter: Phaser.Scale.CENTER_BOTH
